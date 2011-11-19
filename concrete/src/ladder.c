@@ -3,6 +3,11 @@
 #include <stdio.h>
 
 
+//-------------------------------------------------------------------------------------------------
+
+// initializes the soft item chain. These are used to stitch together binary lists generated 
+// on different cycles of the state machine.
+
 SoftItem* initialize(const char* dir_name)
 {
 	glob_t globbuf;
@@ -16,6 +21,10 @@ SoftItem* initialize(const char* dir_name)
 	return ll_link(sorted);
 }
 
+
+//-------------------------------------------------------------------------------------------------
+
+// A simple sort of file names to ensure they are in order. Speed is unnecessary.
 
 void trivial_sort(glob_t* pglob, char* sorted[20])
 {
@@ -47,6 +56,10 @@ void trivial_sort(glob_t* pglob, char* sorted[20])
 }
 
 
+//-------------------------------------------------------------------------------------------------
+
+// initializes a array [20] of strings (char *) to "zzzzz"
+
 void populate(char* list[20])
 {
 	int i = 0;
@@ -58,6 +71,11 @@ void populate(char* list[20])
 	}
 }
 
+
+//-------------------------------------------------------------------------------------------------
+
+// moves every item in the given array which falls after @index@ to the right one position.
+// used to make room for an insertion.
 
 void shift_after(int index, char* list[20])
 {
@@ -75,6 +93,12 @@ void shift_after(int index, char* list[20])
 		}
 	}
 }
+
+
+//-------------------------------------------------------------------------------------------------
+
+// Stitches a given list of file names into (SoftItem *)s. SoftItems are chained together blocks
+// of disk space. Individual elements of the chain are lifted into memory as they are needed.
 
 SoftItem* ll_link(char* list[20])
 {
@@ -114,12 +138,21 @@ SoftItem* ll_link(char* list[20])
 	return tlst[0];
 }
 
+
+//-------------------------------------------------------------------------------------------------
+
+// allocates and returns a pointer to a memory block containing a SoftItem.
+
 SoftItem* nsoft()
 {
 	SoftItem* psi = (SoftItem*) malloc(sizeof(SoftItem));
 	return psi;
 }
 
+
+//-------------------------------------------------------------------------------------------------
+
+// deallocates and nullifies a pointer to a memory block containing a SoftItem.
 
 void ksoft(SoftItem* ptr)
 {
