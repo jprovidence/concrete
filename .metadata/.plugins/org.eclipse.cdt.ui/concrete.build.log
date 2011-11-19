@@ -1,0 +1,16 @@
+
+**** Build of configuration Debug for project concrete ****
+
+make all 
+Building file: ../src/ladder.c
+Invoking: GCC C Compiler
+gcc -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"src/ladder.d" -MT"src/ladder.d" -o "src/ladder.o" "../src/ladder.c"
+Finished building: ../src/ladder.c
+ 
+Building target: concrete
+Invoking: GCC C Linker
+gcc  -o "concrete"  ./src/concrete.o ./src/ladder.o   
+Finished building target: concrete
+ 
+
+**** Build Finished ****

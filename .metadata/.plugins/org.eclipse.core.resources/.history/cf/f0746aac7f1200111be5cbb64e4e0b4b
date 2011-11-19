@@ -1,6 +1,4 @@
 #include "ladder.h"
-#include <stdlib.h>
-#include <stdio.h>
 
 
 SoftItem* initialize(const char* dir_name)
@@ -21,9 +19,7 @@ void trivial_sort(glob_t* pglob, char* sorted[20])
 {
 	int count, icount;
 	char* current_sorted, * current_unsorted;
-	void* cpy_dest;
 
-	count = 0;
 	while(count < pglob->gl_pathc)
 	{
 		current_unsorted = pglob->gl_pathv[count];
@@ -36,9 +32,7 @@ void trivial_sort(glob_t* pglob, char* sorted[20])
 			if (strcmp(current_sorted, current_unsorted) > 0)
 			{
 				shift_after(icount, sorted);
-				cpy_dest = (void*) malloc(100);
-				memmove(cpy_dest, current_unsorted, 100);
-				sorted[icount] = cpy_dest;
+				sorted[icount] = current_unsorted;
 			}
 			icount ++;
 		}
