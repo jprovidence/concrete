@@ -1,14 +1,72 @@
 #include "ladder.h"
-#include <stdlib.h>
-#include <stdio.h>
+
+
+void blevel_iterate()
+{
+
+}
+
+
+
+HardItem* memlift(SoftItem* psi)
+{
+	FILE* f;
+	int i;
+	HardItem* phi;
+
+	f = fopen(psi->disk_location, "r");
+	phi = nhard();
+
+	for(i = 0; i < 62500; i++)
+	{
+		fread(&(phi->midlist[i]), sizeof(uint16_t), 1, f);
+	}
+
+	phi->disk_location = psi->disk_location;
+
+	if(psi->soft_next != NULL)
+	{
+		phi->soft_next = psi->soft_next;
+	}
+
+	ksoft(psi);
+	return(phi);
+}
+
+SoftItem* memlower(HardItem* phi)
+{
+	FILE* f;
+	SoftItem* psi;
+	int i;
+
+	f = fopen(phi->disk_location, "w");
+
+	for(i = 0; i < 62500; i++)
+	{
+		fwrite(&(phi->midlist[i]), sizeof(uint16_t), 1, f);
+	}
+
+	psi = nsoft();
+	psi->disk_location = phi->disk_location;
+
+	if (phi->soft_next != NULL)
+	{
+		psi->soft_next = phi->soft_next;
+	}
+
+	khard(phi);
+	return psi;
+}
+
+
 
 
 //-------------------------------------------------------------------------------------------------
 
-// initializes the soft item chain. These are used to stitch together binary lists generated 
+// initializes the soft item chain. These are used to stitch together binary lists generated
 // on different cycles of the state machine.
 
-SoftItem* initialize(const char* dir_name)
+SoftItem* link_softs(const char* dir_name)
 {
 	glob_t globbuf;
 	char* sorted[20];
@@ -36,6 +94,10 @@ void trivial_sort(glob_t* pglob, char* sorted[20])
 	while(count < pglob->gl_pathc)
 	{
 		current_unsorted = pglob->gl_pathv[count];
+		if (strcmp(current_unsorted, ".") == 0 || strcmp(current_unsorted, "..") == 0)
+		{
+			continue;
+		}
 
 		icount = 0;
 		while(icount <= count)
@@ -49,6 +111,7 @@ void trivial_sort(glob_t* pglob, char* sorted[20])
 				memmove(cpy_dest, current_unsorted, 100);
 				sorted[icount] = cpy_dest;
 			}
+
 			icount ++;
 		}
 		count++;
@@ -87,6 +150,7 @@ void shift_after(int index, char* list[20])
 		{
 			list[i + 1] = list[i];
 		}
+
 		if(i == index)
 		{
 			break;
@@ -126,6 +190,7 @@ SoftItem* ll_link(char* list[20])
 	{
 		if (tlst[i + 1] == NULL)
 		{
+			tlst[i]->soft_next = NULL;
 			break;
 		}
 		else
@@ -159,3 +224,17 @@ void ksoft(SoftItem* ptr)
 	free(ptr);
 	ptr = NULL;
 }
+
+HardItem* nhard()
+{
+	HardItem* phi = (HardItem*) malloc(sizeof(HardItem));
+	return phi;
+}
+
+
+void khard(HardItem* ptr)
+{
+	free(ptr);
+	ptr = NULL;
+}
+
