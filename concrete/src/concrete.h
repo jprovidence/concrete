@@ -1,7 +1,7 @@
 /*
  * concrete.h
  *
- *  Created on: 2011-11-19
+ *  Created on: 2011-11-20
  *      Author: providence
  */
 
@@ -9,7 +9,11 @@
 #define CONCRETE_H_
 
 
-#include "ladder.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include "blist.h"
+#include "node.h"
+#include "linker.h"
 
 
 #endif /* CONCRETE_H_ */
