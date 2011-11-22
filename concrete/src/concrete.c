@@ -17,6 +17,19 @@ int main(void)
 		ptr = ptr->next;
 	}
 
+	Linker * plkr;
+	plkr = load("/home/providence/Dropbox/_ticket/c_devel/concretea/test_data/*", k);
+	ptr = plkr;
+
+	while(ptr != NULL)
+	{
+		printf("DIR: %s \n", ptr->disk_location);
+		fflush(stdout);
+		ptr = ptr->next;
+	}
+
+	unload(plkr);
+
 
 	// test bin list lift and drop
 

@@ -1,5 +1,18 @@
 #include "linker.h"
 
+Linker* load(const char* dir_name, Kind k)
+{
+	Linker* llist = malloc(sizeof(Linker) * 26);
+	link(dir_name, k, llist);
+	return llist;
+}
+
+void unload(Linker* ptr)
+{
+	free(ptr);
+	ptr = NULL;
+}
+
 void link(const char* dir_name, Kind k, Linker llist[26])
 {
 	glob_t globbuf;

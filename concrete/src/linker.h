@@ -26,6 +26,10 @@ struct Linker
 typedef struct Linker Linker;
 
 
+Linker* load(const char* dir_name, Kind k);
+
+void unload(Linker* ptr);
+
 void link(const char* dir_name, Kind k, Linker llist[26]);
 
 void build_chain(char* sorted[26], Kind k, Linker llist[26]);
