@@ -5,6 +5,12 @@ void augment_index(char* url, int idx, int mod_bytes, int mod_bits)
 	const char* alpha = ALPHA;
 }
 
+
+//-------------------------------------------------------------------------------------------------
+
+// Initialise an empty Plateau into each of the char-keyed index files so they they may be appended
+// to later.
+
 void initialize_indicies()
 {
 	glob_t globbuf;
@@ -26,6 +32,13 @@ void initialize_indicies()
 	globfree(&globbuf);
 }
 
+
+//-------------------------------------------------------------------------------------------------
+
+// returns a pointer to the initialized Plateau
+// --
+// allocates memory for and provides default (mostly NULL) values for each of the Plateau fields.
+
 Plateau* nplat()
 {
 	Plateau* ptr = malloc(sizeof(Plateau));
@@ -43,11 +56,27 @@ Plateau* nplat()
 	return ptr;
 }
 
+
+//-------------------------------------------------------------------------------------------------
+
+// @ptr -> a pointer to the plateau whose memory is to be freed
+// --
+// frees memory previously allocated for the Plateau and nullifies the pointer to that memory block
+
 void kplat(Plateau* ptr)
 {
 	free(ptr);
 	ptr = NULL;
 }
+
+
+//-------------------------------------------------------------------------------------------------
+
+// @pplat -> a pointer to the Plateau at the root of the index tree
+// @file  -> a pointer to a char[] containing the name of the file to be written into
+// --
+// delegates the recursive write of the index tree to the database, and coordinates the opening +
+// closing of the file.
 
 void memdrop_idx(Plateau* pplat, char* file)
 {
@@ -55,7 +84,7 @@ void memdrop_idx(Plateau* pplat, char* file)
 	int arr_size = ARRAYSIZE;
 
 	f = fopen(file, "w");
-	drop_idx(pplat, f, arr_size, 0);
+	drop_idx(pplat, f, arr_size, 1); // !! It is imperative index starts at 1
 	fclose(f);
 }
 
@@ -146,7 +175,7 @@ int write_plateau_signature(Plateau* pplat, FILE* f, int arr_size, int index)
 			file_write(f, index, bit);
 		}
 
-		for(i = ((fcsize /2) - 1); i <= 0; i--)
+		for(i = ((fcsize / 2) - 1); i <= 0; i--)
 		{
 			bit = nth_bit_32(pplat->file_coords->mod_bytes, i);
 			file_write(f, index, bit);
@@ -159,9 +188,95 @@ int write_plateau_signature(Plateau* pplat, FILE* f, int arr_size, int index)
 
 //-------------------------------------------------------------------------------------------------
 
-int nth_bit_32(uint32_t var, nth)
-{
+// @f     -> the file the current index tree is being written into
+// @index -> the location in @f to which the next data item should be written to.
+// @bit   -> the bit to be written to the position @index
+//--
+// Tries to read the byte in which index falls. If it does not exist, it is created. The index-th bit
+// is then set via #set_nth_8 and the original byte is written over with the modified version.
 
+void file_write(FILE* f, int index, int bit)
+{
+	int bsize = sizeof(uint8_t);
+	int skips = index / bsize;
+	int mod = index % bsize;
+	int read_status;
+	uint8_t* ptr = NULL;
+
+	fseek(f, skips, SEEK_SET);
+	read_status = fread(ptr, bsize, 1, f);
+
+	if(read_status == 0)
+	{
+		ptr = 0;
+		fseek(f, 0, SEEK_END);
+		fwrite(ptr, bsize, 1, f);
+	}
+
+	set_nth_8(ptr, mod, bit);
+
+	fseek(f, skips, SEEK_SET);
+	fwrite(ptr, bsize, 1, f);
+}
+
+
+//-------------------------------------------------------------------------------------------------
+
+// @ptr -> pointer to the byte which will be operated on
+// @nth -> the bit to be set
+// @bit -> the value (1 || 0) to set @nth to
+// --
+// if the bit is not already set to the desired value, XOR is used in conjunction with a byte of
+// 0s (save for a 1 in the nth position) to flip it
+
+void set_nth_8(uint8_t* ptr, int nth, int bit)
+{
+	int current = nth_bit_8(*ptr, nth);
+
+	if(current != bit)
+	{
+		(*ptr) = (*ptr) ^ 1<<nth;
+	}
+}
+
+
+//-------------------------------------------------------------------------------------------------
+
+// identical to #nth_bit_32, save that @var is uint8_t.
+
+int nth_bit_8(uint8_t var, int nth)
+{
+	int result = var & 1<<nth;
+
+	if(result == 0)
+	{
+		return 0;
+	}
+
+	return 1;
+}
+
+
+//-------------------------------------------------------------------------------------------------
+
+// @var -> the variable from which to extract a bit
+// @nth -> the position of the bit to extract
+// --
+// returns -> 1 if the bit is 1, 0 otherwise
+// --
+// since 1 & 0 == 0 && 0 & 0 == 0, given a bitstring of all zeros, save for a 1 at the nth position,
+// a logical & will return a non-zero number iff the nth bit is 1
+
+int nth_bit_32(uint32_t var, int nth)
+{
+	int result = var & 1<<nth;
+
+	if(result == 0)
+	{
+		return 0;
+	}
+
+	return 1;
 }
 
 
@@ -261,4 +376,5 @@ char* file_pivot_char(char* url)
 
 	return &(url[count]);
 }
+
 
