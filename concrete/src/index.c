@@ -72,6 +72,123 @@ void kplat(Plateau* ptr)
 
 //-------------------------------------------------------------------------------------------------
 
+void memlift_idx(char* file)
+{
+	FILE* f;
+	int arr_size = ARRAYSIZE;
+	int* idx = NULL;
+
+	(*idx) = 1;
+	f = fopen(file, "r");
+	lift_idx(f, arr_size, idx); // !! It is imperative index starts at 1
+	fclose(f);
+}
+
+
+Plateau* lift_idx(FILE* f, int arr_size, int* index)
+{
+	int i, null_status, tstore[32];
+	Plateau* pplat = NULL;
+
+	for(i = 0; i < arr_size; i++)
+	{
+		tstore[i] = file_read(f, (*index));
+		(*index)++;
+	}
+
+	read_set_file_coords(f, pplat, index);
+
+	null_status = are_all_null(tstore, 32);
+	if(null_status == 1)
+	{
+		return pplat;
+	}
+	else
+	{
+		for(i = 0; i < arr_size; i++)
+		{
+			if(tstore[i] == 1)
+			{
+				pplat->pointers[i] = lift_idx(f, arr_size, index);
+			}
+		}
+	}
+
+	return pplat;
+}
+
+
+int are_all_null(int* ary, int arr_size)
+{
+	int i;
+
+	for(i = 0; i < arr_size; i++)
+	{
+		if(ary[i] != 0)
+		{
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
+
+void read_set_file_coords(FILE* f, Plateau* pplat, int* index)
+{
+	int fcsize = FCSIZE;
+	int i, j, tstore[(fcsize / 2)];
+	uint32_t* ptr = NULL;
+
+	pplat = nplat();
+
+	for(i = 0; i < (fcsize / 2); i++)
+	{
+		tstore[i] = file_read(f, (*index));
+		(*index)++;
+	}
+
+	j = 0;
+	for(i = ((fcsize / 2) - 1); i >= 0; i--)
+	{
+		set_nth_32(ptr, i, tstore[j]);
+		j++;
+	}
+
+	pplat->file_coords->mod_bits = *ptr;
+
+	for(i = 0; i < (fcsize / 2); i++)
+	{
+		tstore[i] = file_read(f, (*index));
+		(*index)++;
+	}
+
+	j = 0;
+	for(i = ((fcsize / 2) - 1); i >= 0; i--)
+	{
+		set_nth_32(ptr, i, tstore[j]);
+		j++;
+	}
+
+	pplat->file_coords->mod_bytes = *ptr;
+}
+
+
+int file_read(FILE* f, int index)
+{
+	int bsize = sizeof(uint8_t);
+	int skips = index / bsize;
+	int mod = index % bsize;
+	uint8_t* ptr = NULL;
+
+	fseek(f, skips, SEEK_SET);
+	fread(ptr, bsize, 1, f);
+
+	return nth_bit_8((*ptr), mod);
+}
+
+//-------------------------------------------------------------------------------------------------
+
 // @pplat -> a pointer to the Plateau at the root of the index tree
 // @file  -> a pointer to a char[] containing the name of the file to be written into
 // --
@@ -100,6 +217,7 @@ void memdrop_idx(Plateau* pplat, char* file)
 // --
 // delegates the writing of the current Plateau to disk, then recursively writes any Plateaus
 // pointed to by @pplat
+// !! NOTE: It index must begin at 1 !!
 
 int drop_idx(Plateau* pplat, FILE* f, int arr_size, int index)
 {
@@ -232,6 +350,17 @@ void file_write(FILE* f, int index, int bit)
 void set_nth_8(uint8_t* ptr, int nth, int bit)
 {
 	int current = nth_bit_8(*ptr, nth);
+
+	if(current != bit)
+	{
+		(*ptr) = (*ptr) ^ 1<<nth;
+	}
+}
+
+
+void set_nth_32(uint32_t* ptr, int nth, int bit)
+{
+	int current = nth_bit_32(*ptr, nth);
 
 	if(current != bit)
 	{
@@ -376,5 +505,4 @@ char* file_pivot_char(char* url)
 
 	return &(url[count]);
 }
-
 

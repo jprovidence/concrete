@@ -18,6 +18,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 #include <glob.h>
 #include "linker.h"
 
@@ -46,13 +47,31 @@ Plateau* nplat();
 
 void kplat(Plateau* ptr);
 
+void memlift_idx(char* file);
+
+Plateau* lift_idx(FILE* f, int arr_size, int* index);
+
+int are_all_null(int* ary, int arr_size);
+
+void read_set_file_coords(FILE* f, Plateau* pplat, int* index);
+
+int file_read(FILE* f, int index);
+
 void memdrop_idx(Plateau* pplat, char* file);
 
 int drop_idx(Plateau* pplat, FILE* f, int arr_size, int index);
 
 int write_plateau_signature(Plateau* pplat, FILE* f, int arr_size, int index);
 
-int nth_bit_32(uint32_t var, nth);
+void file_write(FILE* f, int index, int bit);
+
+void set_nth_8(uint8_t* ptr, int nth, int bit);
+
+void set_nth_32(uint32_t* ptr, int nth, int bit);
+
+int nth_bit_8(uint8_t var, int nth);
+
+int nth_bit_32(uint32_t var, int nth);
 
 Plateau* plateau_jump(Plateau* start, const char* letter);
 
