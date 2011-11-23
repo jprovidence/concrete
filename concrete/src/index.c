@@ -1,8 +1,69 @@
 #include "index.h"
 
-void augment_index(char* url, int idx, int mod_bytes, int mod_bits)
+//-------------------------------------------------------------------------------------------------
+
+// @pplat     -> a pointer to the root node of the index to be added to
+// @url       -> the url being added to the index
+// @idx       -> the read position within @url
+// @mod_bytes -> the byte skip coordinate for the url being indexed
+// @mod_bits  -> the bit skip coordinate for the url being indexed
+// --
+// creates a path through the index tree which matches the characters in @url, and stores the
+// coordinates at the terminus.
+
+void augment_index(Plateau* pplat, char* url, int idx, uint32_t mod_bytes, uint32_t mod_bits)
 {
-	const char* alpha = ALPHA;
+	Plateau* next;
+	int arr_size = ARRAYSIZE;
+	int i;
+
+	if(is_terminus(url, idx))
+	{
+		pplat->file_coords->mod_bits = mod_bits;
+		pplat->file_coords->mod_bytes = mod_bytes;
+	}
+	else
+	{
+		for(i = 0; i < arr_size; i++)
+		{
+			next = pplat->pointers[i];
+			if(url[idx] == pplat->characters[i] && next == NULL)
+			{
+				next = nplat();
+				pplat->pointers[i] = next;
+			}
+			augment_index(next, url, (idx + 1), mod_bytes, mod_bits);
+		}
+	}
+}
+
+
+//-------------------------------------------------------------------------------------------------
+
+// @url -> the url being indexed
+// @idx -> the current read position within @url
+// --
+// returns -> 1 if @idx is the index of the null terminator, else 0
+
+int is_terminus(char url[200], int idx)
+{
+	int i;
+	int url_size = URLSIZE;
+
+	for(i = 0; i < url_size; i++)
+	{
+		if(&(url[i]) == NULL)
+		{
+			break;
+		}
+	}
+
+	if(i == idx)
+	{
+		return 1;
+	}
+
+	return 0;
 }
 
 
@@ -11,7 +72,7 @@ void augment_index(char* url, int idx, int mod_bytes, int mod_bits)
 // Initialise an empty Plateau into each of the char-keyed index files so they they may be appended
 // to later.
 
-void initialize_indicies()
+void initialize_indices()
 {
 	glob_t globbuf;
 	char* dir_name = MASTER_URL_DIR;
@@ -21,6 +82,7 @@ void initialize_indicies()
 	int i;
 
 	glob(dir_name, GLOB_ERR, NULL, &globbuf);
+	populate(sorted_files);
 	trivial_sort(sorted_files, &globbuf);
 
 	for(i = 0; i < arr_size; i++)
@@ -30,6 +92,37 @@ void initialize_indicies()
 	}
 
 	globfree(&globbuf);
+}
+
+
+//-------------------------------------------------------------------------------------------------
+
+// returns -> the root of the entire index tree, across all files
+// --
+// calls #memlift_idx for each tree stored across all files in MASTER_URL_DIR
+
+Plateau* load_all_indices()
+{
+	glob_t globbuf;
+	char* dir_name, * sorted_files[26];
+	Plateau* pplat;
+	int arr_size, i;
+
+	arr_size = ARRAYSIZE;
+	dir_name = MASTER_URL_DIR;
+	pplat = nplat();
+
+	glob(dir_name, GLOB_ERR, NULL, &globbuf);
+	populate(sorted_files);
+	trivial_sort(sorted_files, &globbuf);
+
+	for(i = 0; i < arr_size; i++)
+	{
+		pplat->pointers[i] = memlift_idx(sorted_files[i]);
+	}
+
+	globfree(&globbuf);
+	return pplat;
 }
 
 
@@ -52,7 +145,7 @@ Plateau* nplat()
 		ptr->pointers[i] = NULL;
 	}
 
-	ptr->file_coords = NULL;
+	ptr->file_coords = malloc(sizeof(Plateau));
 	return ptr;
 }
 
@@ -65,6 +158,8 @@ Plateau* nplat()
 
 void kplat(Plateau* ptr)
 {
+	free(ptr->file_coords);
+	ptr->file_coords = NULL;
 	free(ptr);
 	ptr = NULL;
 }
@@ -72,27 +167,51 @@ void kplat(Plateau* ptr)
 
 //-------------------------------------------------------------------------------------------------
 
-void memlift_idx(char* file)
+// @file -> a char[] holding the name of the file which stores the stored array
+// --
+// returns -> a pointer to the root plateau of this file.
+// --
+// delegates the lifting of the entire index tree stored in @file into memory.
+
+Plateau* memlift_idx(char* file)
 {
 	FILE* f;
+	Plateau* pplat;
 	int arr_size = ARRAYSIZE;
-	int* idx = NULL;
+	int* idx = malloc(sizeof(int));
+	*idx = 0;
 
-	(*idx) = 1;
 	f = fopen(file, "r");
-	lift_idx(f, arr_size, idx); // !! It is imperative index starts at 1
+	pplat = lift_idx(f, arr_size, idx); // !! It is imperative index starts at 0
 	fclose(f);
+
+	free(idx);
+	idx = NULL;
+
+	return pplat;
 }
 
+
+//-------------------------------------------------------------------------------------------------
+
+// @f        -> a pointer to the file from which the index is being read
+// @arr_size -> the size of Plateau's internal arrays
+// @index    -> a pointer to the integer which stores the cursor on the file
+// --
+// returns -> a pointer to the Plateau being reconstructed
+// --
+// represents one stage in the left-to-right reconstruction of the index tree. Integers representing
+// the boolean bits which signal futher Plateau connectivity are read from the file, and based on
+// which ones are '1' the subsequent Plateau levels are read recursively.
 
 Plateau* lift_idx(FILE* f, int arr_size, int* index)
 {
 	int i, null_status, tstore[32];
-	Plateau* pplat = NULL;
+	Plateau* pplat = nplat();
 
 	for(i = 0; i < arr_size; i++)
 	{
-		tstore[i] = file_read(f, (*index));
+		file_read(f, (*index), &(tstore[i]));
 		(*index)++;
 	}
 
@@ -118,6 +237,15 @@ Plateau* lift_idx(FILE* f, int arr_size, int* index)
 }
 
 
+//-------------------------------------------------------------------------------------------------
+
+// @ary      -> pointer to the array to be check for null
+// @arr_size -> size of @ary
+// --
+// returns -> 1 if all are null, else 0
+// --
+// checks each member of ary for null-ness. If all are null return 0, else return 1.
+
 int are_all_null(int* ary, int arr_size)
 {
 	int i;
@@ -134,17 +262,28 @@ int are_all_null(int* ary, int arr_size)
 }
 
 
+//-------------------------------------------------------------------------------------------------
+
+// @f     -> the file in which the index is stored
+// @pplat -> pointer to the plateau being reconstructed
+// @index -> pointer to an int storing the the read position in @f in bits.
+// --
+// This function retrives stored file-coordinates (mod_bytes and mod_bits) from the index file.
+// reads two 32 bit integers from @f. 32 ints are used to represent the bits until the entire
+// sequence has been read. These int representations are then converted back into bits and
+// packed into a single uint32_t, which is assigned as a file coordinate.
+
 void read_set_file_coords(FILE* f, Plateau* pplat, int* index)
 {
 	int fcsize = FCSIZE;
 	int i, j, tstore[(fcsize / 2)];
-	uint32_t* ptr = NULL;
+	uint32_t* ptr = malloc(sizeof(uint32_t));
 
 	pplat = nplat();
 
 	for(i = 0; i < (fcsize / 2); i++)
 	{
-		tstore[i] = file_read(f, (*index));
+		file_read(f, (*index), &(tstore[i]));
 		(*index)++;
 	}
 
@@ -155,11 +294,12 @@ void read_set_file_coords(FILE* f, Plateau* pplat, int* index)
 		j++;
 	}
 
-	pplat->file_coords->mod_bits = *ptr;
+	memmove(&(pplat->file_coords->mod_bits), ptr, sizeof(uint32_t));
+	*ptr = 0;
 
 	for(i = 0; i < (fcsize / 2); i++)
 	{
-		tstore[i] = file_read(f, (*index));
+		file_read(f, (*index), &(tstore[i]));
 		(*index)++;
 	}
 
@@ -170,27 +310,37 @@ void read_set_file_coords(FILE* f, Plateau* pplat, int* index)
 		j++;
 	}
 
-	pplat->file_coords->mod_bytes = *ptr;
+	memmove(&(pplat->file_coords->mod_bytes), ptr, sizeof(uint32_t));
+
+	free(ptr);
+	ptr = NULL;
 }
 
 
-int file_read(FILE* f, int index)
+//-------------------------------------------------------------------------------------------------
+
+// @f     -> the file from which the index tree is being loaded
+// @index -> the position bit to be read next, relative to the file start
+// @ptr   -> the location in which to save an integer representation of the bit read
+// --
+// seeks the index in the file, reads that bit and stores an int representation of it into *ptr
+
+void file_read(FILE* f, int index, int* ptr)
 {
-	int bsize = sizeof(uint8_t);
+	int bsize = sizeof(uint8_t) * 8;
 	int skips = index / bsize;
 	int mod = index % bsize;
-	uint8_t* ptr = NULL;
 
 	fseek(f, skips, SEEK_SET);
 	fread(ptr, bsize, 1, f);
 
-	return nth_bit_8((*ptr), mod);
+	*ptr = nth_bit_8((*ptr), mod);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-// @pplat -> a pointer to the Plateau at the root of the index tree
-// @file  -> a pointer to a char[] containing the name of the file to be written into
+// @pplat     -> a pointer to the Plateau at the root of the index tree
+// @file      -> a pointer to a char[] containing the name of the file to be written into
 // --
 // delegates the recursive write of the index tree to the database, and coordinates the opening +
 // closing of the file.
@@ -200,24 +350,24 @@ void memdrop_idx(Plateau* pplat, char* file)
 	FILE* f;
 	int arr_size = ARRAYSIZE;
 
-	f = fopen(file, "w");
-	drop_idx(pplat, f, arr_size, 1); // !! It is imperative index starts at 1
+	f = fopen(file, "w+");
+	drop_idx(pplat, f, arr_size, 0); // !! It is imperative index starts at 0
 	fclose(f);
 }
 
 
 //-------------------------------------------------------------------------------------------------
 
-// @pplat    -> pointer to the Plateau being described to the open file
-// @f        -> the file to which the current index tree is being written
-// @arr_size -> the number of char-keys in the given Plateau
-// @index    -> the location in @f to which the next unit of data should be written
+// @pplat     -> pointer to the Plateau being described to the open file
+// @f         -> the file to which the current index tree is being written
+// @arr_size  -> the number of char-keys in the given Plateau
+// @index     -> the location in @f to which the next unit of data should be written
 // --
 // returns -> the index as it has been advanced by any writes performed within the function
 // --
 // delegates the writing of the current Plateau to disk, then recursively writes any Plateaus
 // pointed to by @pplat
-// !! NOTE: It index must begin at 1 !!
+// !! NOTE: It index must begin at 0 !!
 
 int drop_idx(Plateau* pplat, FILE* f, int arr_size, int index)
 {
@@ -236,6 +386,7 @@ int drop_idx(Plateau* pplat, FILE* f, int arr_size, int index)
 		}
 	}
 
+	kplat(pplat);
 	return index;
 }
 
@@ -315,26 +466,31 @@ int write_plateau_signature(Plateau* pplat, FILE* f, int arr_size, int index)
 
 void file_write(FILE* f, int index, int bit)
 {
-	int bsize = sizeof(uint8_t);
+	int bsize = sizeof(uint8_t) * 8;
 	int skips = index / bsize;
 	int mod = index % bsize;
 	int read_status;
-	uint8_t* ptr = NULL;
+	uint8_t* ptr;
+
+	ptr = malloc(sizeof(uint8_t));
 
 	fseek(f, skips, SEEK_SET);
-	read_status = fread(ptr, bsize, 1, f);
+	read_status = fread(ptr, sizeof(uint8_t), 1, f);
 
 	if(read_status == 0)
 	{
-		ptr = 0;
-		fseek(f, 0, SEEK_END);
-		fwrite(ptr, bsize, 1, f);
+		*ptr = 0;
+		fseek(f, skips, SEEK_SET);
+		fwrite(ptr, sizeof(uint8_t), 1, f);
 	}
 
 	set_nth_8(ptr, mod, bit);
 
 	fseek(f, skips, SEEK_SET);
-	fwrite(ptr, bsize, 1, f);
+	fwrite(ptr, sizeof(uint8_t), 1, f);
+
+	free(ptr);
+	ptr = NULL;
 }
 
 
@@ -357,6 +513,10 @@ void set_nth_8(uint8_t* ptr, int nth, int bit)
 	}
 }
 
+
+//-------------------------------------------------------------------------------------------------
+
+// identical to #set_nth_8, save for *ptr being uint32_t
 
 void set_nth_32(uint32_t* ptr, int nth, int bit)
 {
@@ -471,6 +631,7 @@ char* index_file_name(char* url)
 //-------------------------------------------------------------------------------------------------
 
 // @ptr -> a pointer to a file_name "string" returned by a previous call to #index_file_name
+// --
 // frees all memory allocation in a previous call to #index_file_name
 
 void free_index_file_name(char* ptr)

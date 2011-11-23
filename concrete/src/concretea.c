@@ -3,7 +3,7 @@
 int main(void)
 {
 	// test dir sorting and linking
-
+/*
 	Kind k = binary_list;
 	Linker lkr[26], * ptr;
 	link("/home/providence/Dropbox/_ticket/c_devel/concretea/test_data/*", k, lkr);
@@ -76,6 +76,20 @@ int main(void)
 	dropmem_node(nlist);
 
 	printf("SUCCESS: Drop/Lift of node list");
+
+*/
+	// test indicies
+
+	initialize_indices();
+
+	printf("SUCCESS: Indices initialized \n");
+	fflush(stdout);
+
+
+	Plateau* pplat = load_all_indices();
+
+	printf("SUCCESS: Indices loaded \n");
+	fflush(stdout);
 
 
 	exit(EXIT_SUCCESS);

@@ -10,8 +10,9 @@
 
 
 #define FILE_TERMINATOR "._ticket";
-#define MASTER_URL_DIR "/home/providence/Dropbox/_ticket/c_devel/concretea/test_data/master_url_index";
+#define MASTER_URL_DIR "/home/providence/Dropbox/_ticket/c_devel/concretea/test_data/master_url_index/*";
 #define ARRAYSIZE 26;
+#define URLSIZE 200;
 #define FCSIZE 64; // number bits in FileCoords
 #define ALPHA "abcdefghijklmnopqrstuvwxyz";
 
@@ -39,15 +40,19 @@ struct Plateau
 typedef struct Plateau Plateau;
 
 
-void augment_index(char* url, int idx, int mod_bytes, int mod_bits);
+void augment_index(Plateau* pplat, char* url, int idx, uint32_t mod_bytes, uint32_t mod_bits);
 
-void initialize_indicies();
+int is_terminus(char url[200], int idx);
+
+void initialize_indices();
+
+Plateau* load_all_indices();
 
 Plateau* nplat();
 
 void kplat(Plateau* ptr);
 
-void memlift_idx(char* file);
+Plateau* memlift_idx(char* file);
 
 Plateau* lift_idx(FILE* f, int arr_size, int* index);
 
@@ -55,7 +60,7 @@ int are_all_null(int* ary, int arr_size);
 
 void read_set_file_coords(FILE* f, Plateau* pplat, int* index);
 
-int file_read(FILE* f, int index);
+void file_read(FILE* f, int index, int* ptr);
 
 void memdrop_idx(Plateau* pplat, char* file);
 
