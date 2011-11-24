@@ -26,15 +26,49 @@ void augment_index(Plateau* pplat, char* url, int idx, uint32_t mod_bytes, uint3
 	{
 		for(i = 0; i < arr_size; i++)
 		{
-			next = pplat->pointers[i];
-			if(url[idx] == pplat->characters[i] && next == NULL)
+			if(url[idx] == pplat->characters[i])
 			{
-				next = nplat();
-				pplat->pointers[i] = next;
+				next = pplat->pointers[i];
+
+				if(next == NULL)
+				{
+					next = nplat();
+					pplat->pointers[i] = next;
+				}
+				augment_index(next, url, (idx + 1), mod_bytes, mod_bits);
 			}
-			augment_index(next, url, (idx + 1), mod_bytes, mod_bits);
 		}
 	}
+}
+
+
+FileCoords* lookup_index(Plateau* pplat, char url[200], int idx)
+{
+	int i;
+	int arr_size = ARRAYSIZE;
+	Plateau* next;
+
+	for(i = 0; i < arr_size; i++)
+	{
+		if(is_terminus(url, idx))
+		{
+			return pplat->file_coords;
+		}
+
+		if(pplat->characters[i] == url[idx])
+		{
+			next = pplat->pointers[i];
+			if(next == NULL)
+			{
+				return NULL;
+			}
+			else
+			{
+				return lookup_index(next, url, (idx + 1));
+			}
+		}
+	}
+	return NULL;
 }
 
 
@@ -47,22 +81,10 @@ void augment_index(Plateau* pplat, char* url, int idx, uint32_t mod_bytes, uint3
 
 int is_terminus(char url[200], int idx)
 {
-	int i;
-	int url_size = URLSIZE;
-
-	for(i = 0; i < url_size; i++)
-	{
-		if(&(url[i]) == NULL)
-		{
-			break;
-		}
-	}
-
-	if(i == idx)
+	if(idx == strlen(url))
 	{
 		return 1;
 	}
-
 	return 0;
 }
 
@@ -126,6 +148,28 @@ Plateau* load_all_indices()
 }
 
 
+void drop_all_indices(Plateau* pplat)
+{
+	glob_t globbuf;
+	char* dir_name, * sorted_files[26];
+	int arr_size, i;
+
+	dir_name = MASTER_URL_DIR;
+	arr_size = ARRAYSIZE;
+
+	glob(dir_name, GLOB_ERR, NULL, &globbuf);
+	populate(sorted_files);
+	trivial_sort(sorted_files, &globbuf);
+
+	for(i = 0; i < arr_size; i++)
+	{
+		memdrop_idx(pplat->pointers[i], sorted_files[i]);
+	}
+
+	kplat(pplat);
+}
+
+
 //-------------------------------------------------------------------------------------------------
 
 // returns a pointer to the initialized Plateau
@@ -139,13 +183,19 @@ Plateau* nplat()
 	int arr_size = ARRAYSIZE;
 	int i;
 
+	ptr->characters = malloc(sizeof(char) * 26);
+	ptr->pointers = malloc(sizeof(Plateau*) * 26);
+
 	for(i = 0; i < arr_size; i++)
 	{
 		ptr->characters[i] = alpha[i];
 		ptr->pointers[i] = NULL;
 	}
 
-	ptr->file_coords = malloc(sizeof(Plateau));
+	ptr->file_coords = malloc(sizeof(FileCoords));
+	ptr->file_coords->mod_bits = 0;
+	ptr->file_coords->mod_bytes = 0;
+
 	return ptr;
 }
 
@@ -158,6 +208,10 @@ Plateau* nplat()
 
 void kplat(Plateau* ptr)
 {
+	free(ptr->characters);
+	ptr->characters = NULL;
+	free(ptr->pointers);
+	ptr->pointers = NULL;
 	free(ptr->file_coords);
 	ptr->file_coords = NULL;
 	free(ptr);
@@ -279,8 +333,6 @@ void read_set_file_coords(FILE* f, Plateau* pplat, int* index)
 	int i, j, tstore[(fcsize / 2)];
 	uint32_t* ptr = malloc(sizeof(uint32_t));
 
-	pplat = nplat();
-
 	for(i = 0; i < (fcsize / 2); i++)
 	{
 		file_read(f, (*index), &(tstore[i]));
@@ -288,7 +340,7 @@ void read_set_file_coords(FILE* f, Plateau* pplat, int* index)
 	}
 
 	j = 0;
-	for(i = ((fcsize / 2) - 1); i >= 0; i--)
+	for(i = 0; i < (fcsize / 2); i++)
 	{
 		set_nth_32(ptr, i, tstore[j]);
 		j++;
@@ -304,7 +356,7 @@ void read_set_file_coords(FILE* f, Plateau* pplat, int* index)
 	}
 
 	j = 0;
-	for(i = ((fcsize / 2) - 1); i >= 0; i--)
+	for(i = 0; i < (fcsize / 2); i++)
 	{
 		set_nth_32(ptr, i, tstore[j]);
 		j++;
@@ -403,7 +455,7 @@ int drop_idx(Plateau* pplat, FILE* f, int arr_size, int index)
 // Iterates through each of the char-keys of @pplat. For each one, if the pointer associated with
 // the current char-key is NULL, a 0 is written to the file and the index advanced. If it is not
 // NULL a 1 is written and the index advanced. @pplat->file_coords is next written to the file, or
-// 512 '0' bits if it does not exist.
+// 64 '0' bits if it does not exist.
 
 int write_plateau_signature(Plateau* pplat, FILE* f, int arr_size, int index)
 {
@@ -428,7 +480,7 @@ int write_plateau_signature(Plateau* pplat, FILE* f, int arr_size, int index)
 		index++;
 	}
 
-	if(pplat->file_coords == NULL)
+	if(pplat->file_coords == 0)
 	{
 		for(i = 0; i < fcsize; i++)
 		{
@@ -438,16 +490,18 @@ int write_plateau_signature(Plateau* pplat, FILE* f, int arr_size, int index)
 	}
 	else // write individual bits of file coords to f
 	{
-		for(i = ((fcsize / 2) - 1); i <= 0; i--)
+		for(i = 0; i < (fcsize / 2); i++)
 		{
 			bit = nth_bit_32(pplat->file_coords->mod_bits, i);
 			file_write(f, index, bit);
+			index++;
 		}
 
-		for(i = ((fcsize / 2) - 1); i <= 0; i--)
+		for(i = 0; i < (fcsize / 2); i++)
 		{
 			bit = nth_bit_32(pplat->file_coords->mod_bytes, i);
 			file_write(f, index, bit);
+			index++;
 		}
 	}
 
@@ -506,10 +560,11 @@ void file_write(FILE* f, int index, int bit)
 void set_nth_8(uint8_t* ptr, int nth, int bit)
 {
 	int current = nth_bit_8(*ptr, nth);
+	nth = 8 - nth; // reverse, file bytes are written back to front.
 
 	if(current != bit)
 	{
-		(*ptr) = (*ptr) ^ 1<<nth;
+		(*ptr) = (*ptr) ^ 1<<(nth - 1);
 	}
 }
 
@@ -521,6 +576,7 @@ void set_nth_8(uint8_t* ptr, int nth, int bit)
 void set_nth_32(uint32_t* ptr, int nth, int bit)
 {
 	int current = nth_bit_32(*ptr, nth);
+	nth = 32 - nth; // reverse, file bytes are written back to front.
 
 	if(current != bit)
 	{
@@ -535,7 +591,8 @@ void set_nth_32(uint32_t* ptr, int nth, int bit)
 
 int nth_bit_8(uint8_t var, int nth)
 {
-	int result = var & 1<<nth;
+	nth = 8 - nth;
+	int result = var & 1<<(nth - 1);
 
 	if(result == 0)
 	{
@@ -558,6 +615,7 @@ int nth_bit_8(uint8_t var, int nth)
 
 int nth_bit_32(uint32_t var, int nth)
 {
+	nth = 32 - nth;
 	int result = var & 1<<nth;
 
 	if(result == 0)

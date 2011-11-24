@@ -32,8 +32,8 @@ typedef struct FileCoords FileCoords;
 
 struct Plateau
 {
-	char characters[26];
-	struct Plateau* pointers[26];
+	char* characters;
+	struct Plateau** pointers;
 	struct FileCoords* file_coords;
 
 };
@@ -42,11 +42,15 @@ typedef struct Plateau Plateau;
 
 void augment_index(Plateau* pplat, char* url, int idx, uint32_t mod_bytes, uint32_t mod_bits);
 
+FileCoords* lookup_index(Plateau* pplat, char url[200], int idx);
+
 int is_terminus(char url[200], int idx);
 
 void initialize_indices();
 
 Plateau* load_all_indices();
+
+void drop_all_indices(Plateau* pplat);
 
 Plateau* nplat();
 
