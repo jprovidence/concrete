@@ -2,82 +2,57 @@
 
 int main(void)
 {
-	// test dir sorting and linking
-/*
-	Kind k = binary_list;
-	Linker lkr[26], * ptr;
-	link("/home/providence/Dropbox/_ticket/c_devel/concretea/test_data/*", k, lkr);
+	// test node storage
 
-	ptr = lkr;
+	// INITIALIZE --
+	initialize_node();
 
-	while(ptr != NULL)
-	{
-		printf("DIR: %s \n", ptr->disk_location);
-		fflush(stdout);
-		ptr = ptr->next;
-	}
-
-	Linker * plkr;
-	plkr = load("/home/providence/Dropbox/_ticket/c_devel/concretea/test_data/*", k);
-	ptr = plkr;
-
-	while(ptr != NULL)
-	{
-		printf("DIR: %s \n", ptr->disk_location);
-		fflush(stdout);
-		ptr = ptr->next;
-	}
-
-	unload(plkr);
-
-
-	// test bin list lift and drop
-
-	Blist* pbin = nbin();
-	ptr = lkr;
-	int i;
-
-	for(i = 0; i < 62500; i++)
-	{
-		pbin->bit_list[i] = 1;
-	}
-
-	pbin->disk_location = "/home/providence/Dropbox/_ticket/c_devel/concretea/test_data/a._ticket";
-
-	dropmem_blist(pbin);
-	pbin = liftmem_blist(ptr);
-	dropmem_blist(pbin);
-
-	printf("SUCCESS: Drop/Lift of Blist.\n");
+	printf("SUCCESS: Node initialized \n");
 	fflush(stdout);
 
 
-	// test node list lift and drop
+	// LOAD --
+	Node* node = memlift_node("default");
 
-	k = node_list;
-	Linker lkr_two[26];
-	link("/home/providence/Dropbox/_ticket/c_devel/concretea/test_data/*", k, lkr_two);
-	Node_list* nlist = nnode_list();
-	ptr = lkr_two;
-	ptr = ptr->next;
+	printf("SUCCESS: Node loaded \n");
+	fflush(stdout);
 
-	for(i = 0; i < 1000000; i++)
-	{
-		nlist->node_list[i] = nnode();
-		nlist->node_list[i]->is_placeholder = 0;
-		nlist->node_list[i]->size = 1;
-		set_url(nlist->node_list[i], "test");
-	}
 
-	nlist->disk_location = "/home/providence/Dropbox/_ticket/c_devel/concretea/test_data/b._ticket";
+	// ASSIGN --
+	*(node->is_placeholder) = 1;
+	set_node_url(node, "testpattern");
 
-	dropmem_node(nlist);
-	nlist = liftmem_node(ptr);
-	dropmem_node(nlist);
+	printf("ASSIGNED: %s  ||  DESIRED: testpattern\n", node->url);
+	fflush(stdout);
 
-	printf("SUCCESS: Drop/Lift of node list");
 
-*/
+	// CONCAT --
+	Node* other = nnode();
+	*(other->is_placeholder) = 1;
+	set_node_url(other, "otherpattern");
+	node = node_concat(other, node, 0);
+
+	printf("INITIAL LINKAGE::\n");
+	printf("LINKED: First: otherpattern  ||  Second: testpattern\n");
+	printf("ACTUAL: First: %s  ||  Second: %s \n", node->url, node->next->url);
+	fflush(stdout);
+
+
+	// DROP --
+	memdrop_node(node, "default");
+
+	printf("SUCCESS: Node list dropped\n");
+
+
+	// RELOAD --
+	Node* sec_node = memlift_node("default");
+
+	printf("RELOAD::\n");
+	printf("LINKED: First otherpattern  || Second: testpattern\n");
+	printf("ACTUAL: First %s  || Second: %s \n", sec_node->url, sec_node->next->url);
+	fflush(stdout);
+
+
 	// test indicies
 
 	// INITIALIZE --

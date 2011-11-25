@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "blist.h"
-#include "node.h"
+#include "spool_matrix.h"
 #include "linker.h"
 #include "iterator.h"
 #include "index.h"
