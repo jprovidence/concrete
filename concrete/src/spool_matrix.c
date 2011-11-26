@@ -1,182 +1,196 @@
 #include "spool_matrix.h"
 
-void initialize_node()
+void push_node(Node* node, Node* list)
 {
-	char* node_dir = NODE_DIR;
-	Node* pnode = nnode();
-	memdrop_node(pnode, node_dir);
+	node->next = list;
 }
 
-void set_node_url(Node* node, char* url)
+Node* head_node(Node* list)
 {
-	int len = strlen(url);
-	node->url = malloc((sizeof(char) * len) + 1);
-	memmove(node->url, url, (sizeof(char) * len));
-	node->url[len] = '\0';
-}
-
-Node* node_concat(Node* node, Node* list, int position_flag)
-{
-	if(position_flag == 0)
+	while(list->prev != NULL)
 	{
-		node->next = list;
+		list = list->prev;
 	}
-	else if(position_flag == 1)
-	{
-		Node* copy = list;
+	return list;
+}
 
-		while(list->next != NULL)
+void set_node_url(Node* node, char* url, int free_flag)
+{
+	node->url = malloc(sizeof(char) * strlen(url));
+	memmove(node->url, url, sizeof(char) * strlen(url));
+
+	if(free_flag == 1)
+	{
+		free(url);
+		url = NULL;
+	}
+}
+
+void set_node_placeholder(Node* node, uint8_t uint)
+{
+	*(node->is_placeholder) = uint;
+}
+
+Node* memlift_node()
+{
+	char* file_name = NODE_FILE;
+	FILE* f = fopen(file_name, "r");
+	Node* pnode = nnode();
+	int read_status;
+
+	while(1)
+	{
+		read_status = lift_node_head(pnode, f);
+
+		if(read_status == 0)
 		{
-			node = list->next;
+			break;
 		}
 
-		list->next = node;
-		node = copy;
+		read_status = lift_node_tail(pnode, f);
+
+		pnode->next = nnode();
+		pnode->next->prev = pnode;
+		pnode = pnode->next;
+
+		if(read_status == 0)
+		{
+			break;
+		}
+
 	}
-	return node;
+
+	pnode = pnode->prev;
+	knode(pnode->next);
+	pnode->next = NULL;
+	fclose(f);
+
+	while(pnode->prev != NULL)
+	{
+		pnode = pnode->prev;
+	}
+
+	return(pnode);
 }
 
-
-Node* memlift_node(char* file_name)
+int lift_node_head(Node* pnode, FILE* f)
 {
-	if(strcmp(file_name, "default") == 0)
+	int read_status;
+	uint8_t* ptr = malloc(sizeof(uint8_t));
+
+	read_status = fread(ptr, sizeof(uint8_t), 1, f);
+
+	if(read_status != 0)
 	{
-		file_name = NODE_DIR;
+		memmove(pnode->is_placeholder, ptr, sizeof(uint8_t));
 	}
 
-	Node* ret, * pnode;
-	FILE* f = fopen(file_name, "r");
-	int eof = 1;
-
-	ret = nnode();
-	pnode = ret;
-
-	while(eof != 0)
-	{
-		eof = lift_node(pnode, f);
-	}
-
-	return ret;
+	free(ptr);
+	ptr = NULL;
+	return read_status;
 }
 
-int lift_node(Node* pnode, FILE* f)
+int lift_node_tail(Node* pnode, FILE* f)
 {
-	int end = 0;
-	int i = 0;
-	int eof;
-	char tstore[200], * term;
-	uint8_t* tuint = malloc(sizeof(uint8_t));
+	int read_status, i, len;
+	char tstore[200], * sep;
+	sep = SEPARATOR;
 
-	term = ".";
-	eof = fread(tuint, sizeof(uint8_t), 1, f);
-
-	while(end == 0 && eof != 0)
+	for(i = 0; i < 200; i++)
 	{
-		eof = fread(&(tstore[i]), sizeof(char), 1, f);
+		read_status = fread(&(tstore[i]), sizeof(char), 1, f);
 
-		if(i > 0 && tstore[i] == *term && tstore[i - 1] == *term)
+		if(read_status == 0)
+		{
+			break;
+		}
+
+		if(tstore[i] == *sep)
 		{
 			tstore[i] = '\0';
-			tstore[i - 1] = '\0';
+			len = strlen(tstore);
+			pnode->url = malloc(sizeof(char) * len);
+			strcpy(pnode->url, tstore);
+		}
+	}
 
-			if(strcmp(pnode->url, "zzz") == 0)
-			{
-				free(pnode->url);
-				pnode->is_placeholder = tuint;
-				indiv_strcpy(pnode->url, tstore);
-			}
-			else
-			{
-				pnode->next = nnode();
-				pnode = pnode->next;
+	return read_status;
+}
 
-				free(pnode->url);
-				pnode->is_placeholder = tuint;
-				indiv_strcpy(pnode->url, tstore);
-			}
 
-			end = 1;
+void memdrop_node(Node* pnode)
+{
+	char* file_name = NODE_FILE;
+	FILE* f = fopen(file_name, "w+");
+
+	while(1)
+	{
+		drop_node(pnode, f);
+
+		if(pnode->prev != NULL)
+		{
+			knode(pnode->prev);
+		}
+
+		if(pnode->next == NULL)
+		{
+			break;
 		}
 		else
 		{
-			i++;
+			pnode = pnode->next;
 		}
 	}
-	return eof;
-}
 
-void indiv_strcpy(char* dest, char* orig)
-{
-	int len = strlen(orig);
-	dest = malloc(sizeof(char) * len);
-	strcpy(dest, orig);
-}
-
-void memdrop_node(Node* pnode, char* file_name)
-{
-	if(strcmp(file_name, "default") == 0)
-	{
-		file_name = NODE_DIR;
-	}
-
-	FILE* f = fopen(file_name, "w");
-	Node* old;
-
-	while(pnode != NULL)
-	{
-		drop_node(pnode, f);
-		old = pnode;
-		pnode = pnode->next;
-		knode(old);
-	}
-
+	knode(pnode);
 	fclose(f);
 }
 
-
 void drop_node(Node* pnode, FILE* f)
 {
-	int i = 0;
-	char* separator = SEPARATOR;
-
-	fwrite(pnode->is_placeholder, sizeof(uint8_t), 1, f);
+	int i, len;
+	char* sep = SEPARATOR;
 
 	if(pnode->url != NULL)
 	{
-		while(pnode->url[i] != '\0')
-		{
-			fwrite(&(pnode->url[i]), sizeof(char), 1, f);
-			i++;
-		}
+		len = strlen(pnode->url);
+	}
+	else
+	{
+		len = 0;
 	}
 
-	fwrite(separator, (2 * sizeof(char)), 1, f);
+	fwrite(pnode->is_placeholder, sizeof(uint8_t), 1, f);
+
+	for(i = 0; i < len; i++)
+	{
+		fwrite(&(pnode->url[i]), sizeof(char), 1, f);
+	}
+
+	fwrite(sep, sizeof(char), 1, f);
 }
 
 Node* nnode()
 {
-	Node* node = malloc(sizeof(Node));
-
-	node->is_placeholder = malloc(sizeof(uint8_t));
-	*(node->is_placeholder) = 1;
-
-	node->url = malloc(sizeof(char) * 3);
-	strcpy(node->url, "zzz");
-
-	return node;
+	Node* pnode = malloc(sizeof(Node));
+	pnode->is_placeholder = malloc(sizeof(uint8_t));
+	pnode->url = NULL;
+	pnode->next = NULL;
+	pnode->prev = NULL;
+	return pnode;
 }
 
-void knode(Node* node)
+void knode(Node* pnode)
 {
-	free(node->is_placeholder);
-	node->is_placeholder = NULL;
-
-	if(node->url != NULL)
+	if(pnode->url != NULL)
 	{
-		free(node->url);
-		node->url = NULL;
+		free(pnode->url);
+		pnode->url = NULL;
 	}
 
-	free(node);
-	node = NULL;
+	free(pnode->is_placeholder);
+	pnode->is_placeholder = NULL;
+
+	free(pnode);
+	pnode = NULL;
 }

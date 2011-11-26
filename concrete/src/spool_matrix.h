@@ -5,11 +5,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 #include "linker.h"
 
 
-#define SEPARATOR "..";
-#define NODE_DIR "/home/providence/Dropbox/_ticket/c_devel/concretea/test_data/node_store/node_data._ticket";
+#define NODE_FILE "/home/providence/Dropbox/_ticket/c_devel/concretea/test_data/node_store/node_data._ticket";
+#define SEPARATOR ",";
 
 
 struct Node
@@ -17,28 +18,31 @@ struct Node
 	uint8_t* is_placeholder;
 	char* url;
 	struct Node* next;
+	struct Node* prev;
 };
 typedef struct Node Node;
 
-void initialize_node();
 
-void set_node_url(Node* node, char* url);
+void push_node(Node* node, Node* list);
 
-Node* node_concat(Node* node, Node* list, int position_flag);
+Node* head_node(Node* list);
 
-Node* memlift_node(char* file_name);
+void set_node_url(Node* node, char* url, int free_flag);
 
-int lift_node(Node* pnode, FILE* f);
+void set_node_placeholder(Node* node, uint8_t ptr);
 
-void indiv_strcpy(char* dest, char* orig);
+Node* memlift_node();
 
-void memdrop_node(Node* pnode, char* file_name);
+int lift_node_head(Node* pnode, FILE* f);
+
+int lift_node_tail(Node* pnode, FILE* f);
+
+void memdrop_node(Node* pnode);
 
 void drop_node(Node* pnode, FILE* f);
 
 Node* nnode();
 
-void knode(Node* node);
-
+void knode(Node* pnode);
 
 #endif /* SPOOL_MATRIX_H_ */

@@ -7,7 +7,6 @@
 #include "blist.h"
 #include "spool_matrix.h"
 #include "linker.h"
-#include "iterator.h"
 #include "index.h"
 
 

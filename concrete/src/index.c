@@ -560,7 +560,7 @@ void file_write(FILE* f, int index, int bit)
 void set_nth_8(uint8_t* ptr, int nth, int bit)
 {
 	int current = nth_bit_8(*ptr, nth);
-	nth = 8 - nth; // reverse, file bytes are written back to front.
+	nth = 8 - nth; // reverse, this file's bytes are written back to front.
 
 	if(current != bit)
 	{
