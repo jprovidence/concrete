@@ -167,6 +167,7 @@ void drop_all_indices(Plateau* pplat)
 	}
 
 	kplat(pplat);
+	globfree(&globbuf);
 }
 
 
@@ -260,7 +261,7 @@ Plateau* memlift_idx(char* file)
 
 Plateau* lift_idx(FILE* f, int arr_size, int* index)
 {
-	int i, null_status, tstore[32];
+	int i, null_status, tstore[arr_size];
 	Plateau* pplat = nplat();
 
 	for(i = 0; i < arr_size; i++)
@@ -271,7 +272,7 @@ Plateau* lift_idx(FILE* f, int arr_size, int* index)
 
 	read_set_file_coords(f, pplat, index);
 
-	null_status = are_all_null(tstore, 32);
+	null_status = are_all_null(tstore, arr_size);
 	if(null_status == 1)
 	{
 		return pplat;
@@ -330,8 +331,11 @@ int are_all_null(int* ary, int arr_size)
 void read_set_file_coords(FILE* f, Plateau* pplat, int* index)
 {
 	int fcsize = FCSIZE;
-	int i, j, tstore[(fcsize / 2)];
+	int i, tstore[(fcsize / 2)];
+
+	uint32_t x = 0;
 	uint32_t* ptr = malloc(sizeof(uint32_t));
+	memmove(ptr, &x, sizeof(uint32_t));
 
 	for(i = 0; i < (fcsize / 2); i++)
 	{
@@ -339,11 +343,9 @@ void read_set_file_coords(FILE* f, Plateau* pplat, int* index)
 		(*index)++;
 	}
 
-	j = 0;
 	for(i = 0; i < (fcsize / 2); i++)
 	{
-		set_nth_32(ptr, i, tstore[j]);
-		j++;
+		set_nth_32(ptr, i, tstore[i]);
 	}
 
 	memmove(&(pplat->file_coords->mod_bits), ptr, sizeof(uint32_t));
@@ -355,11 +357,9 @@ void read_set_file_coords(FILE* f, Plateau* pplat, int* index)
 		(*index)++;
 	}
 
-	j = 0;
 	for(i = 0; i < (fcsize / 2); i++)
 	{
-		set_nth_32(ptr, i, tstore[j]);
-		j++;
+		set_nth_32(ptr, i, tstore[i]);
 	}
 
 	memmove(&(pplat->file_coords->mod_bytes), ptr, sizeof(uint32_t));
@@ -419,7 +419,7 @@ void memdrop_idx(Plateau* pplat, char* file)
 // --
 // delegates the writing of the current Plateau to disk, then recursively writes any Plateaus
 // pointed to by @pplat
-// !! NOTE: It index must begin at 0 !!
+// !! NOTE: index must begin at 0 !!
 
 int drop_idx(Plateau* pplat, FILE* f, int arr_size, int index)
 {
@@ -480,7 +480,7 @@ int write_plateau_signature(Plateau* pplat, FILE* f, int arr_size, int index)
 		index++;
 	}
 
-	if(pplat->file_coords == 0)
+	if(pplat->file_coords->mod_bits == 0 && pplat->file_coords->mod_bytes == 0)
 	{
 		for(i = 0; i < fcsize; i++)
 		{
@@ -580,7 +580,7 @@ void set_nth_32(uint32_t* ptr, int nth, int bit)
 
 	if(current != bit)
 	{
-		(*ptr) = (*ptr) ^ 1<<nth;
+		(*ptr) = (*ptr) ^ 1<<(nth - 1);
 	}
 }
 
@@ -592,7 +592,7 @@ void set_nth_32(uint32_t* ptr, int nth, int bit)
 int nth_bit_8(uint8_t var, int nth)
 {
 	nth = 8 - nth;
-	int result = var & 1<<(nth - 1);
+	uint8_t result = var & 1<<(nth - 1);
 
 	if(result == 0)
 	{
@@ -616,7 +616,7 @@ int nth_bit_8(uint8_t var, int nth)
 int nth_bit_32(uint32_t var, int nth)
 {
 	nth = 32 - nth;
-	int result = var & 1<<nth;
+	uint32_t result = var & 1<<(nth - 1);
 
 	if(result == 0)
 	{

@@ -16,8 +16,8 @@ Node* head_node(Node* list)
 
 void set_node_url(Node* node, char* url, int free_flag)
 {
-	node->url = malloc(sizeof(char) * strlen(url));
-	memmove(node->url, url, sizeof(char) * strlen(url));
+	node->url = malloc(sizeof(char) * strlen(url) + 1);
+	strncpy(node->url, url, sizeof(char) * strlen(url) + 1);
 
 	if(free_flag == 1)
 	{
@@ -109,8 +109,9 @@ int lift_node_tail(Node* pnode, FILE* f)
 		{
 			tstore[i] = '\0';
 			len = strlen(tstore);
-			pnode->url = malloc(sizeof(char) * len);
-			strcpy(pnode->url, tstore);
+			pnode->url = malloc(sizeof(char) * len + 1);
+			strncpy(pnode->url, tstore, sizeof(char) * len + 1);
+			break;
 		}
 	}
 

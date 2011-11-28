@@ -35,10 +35,31 @@ int main(void)
 	printf("EXPECTED: node->placeholder :: 1  || ACTUAL: node->placeholder :: %u \n", *(node->is_placeholder));
 	fflush(stdout);
 
-	// LOAD --
-	node = memlift_node();
-	printf("SUCCESS: Node Loaded \n");
+
+	// LINK --
+	Node* first_node = nnode();
+	char* text = "testurltwo\0";
+	uint8_t u = 1;
+
+	set_node_url(first_node, text, 0);
+	set_node_placeholder(first_node, u);
+
+	push_node(first_node, node);
+
+	printf("SUCCESS: Nodes linked. \n");
+	printf("First node url: %s  ||  Second node url: %s \n", first_node->url, first_node->next->url);
 	fflush(stdout);
+
+	memdrop_node(first_node);
+
+	Node* node1 = memlift_node();
+
+	printf("SUCCESS: Linked nodes lifted \n");
+	printf("EXPECTED:: First node url: testurltwo  ||  Second node url: testurl \n");
+	printf("ACTUAL:: First node url: %s  ||  Second node url: %s \n", node1->url, node1->next->url);
+
+	memdrop_node(node1);
+
 
 	// test indicies
 
@@ -85,13 +106,12 @@ int main(void)
 	FileCoords* npfc;
 
 	np_plat = load_all_indices();
-	npfc = lookup_index(pplat, "testpattern", 0);
+	npfc = lookup_index(np_plat, "testpattern", 0);
 
 	printf("Reload INDEX::\n");
 	printf("FC, bytes: %d || Desired: 12\n", npfc->mod_bytes);
 	printf("FC, bits: %d  || Desired: 14\n", npfc->mod_bits);
 	fflush(stdout);
-
 
 	exit(EXIT_SUCCESS);
 }
