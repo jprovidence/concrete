@@ -2,55 +2,169 @@
 
 int main(void)
 {
+	// test bit group
+
+	// CREATE --
+	BitGroup* bg = nbitgroup();
+	BitGroup* nbg = nbitgroup();
+
+	fprintf(stderr, "SUCCESS: BG created \n");
+
+
+	// SET --
+	set_nth_bg(bg, 5, 1);
+	set_nth_bg(bg, 2, 1);
+
+	set_nth_bg(nbg, 1, 1);
+	set_nth_bg(nbg, 4, 1);
+
+	fprintf(stderr, "SUCCESS: BG set \n");
+
+
+	// LINK --
+	link_bg(bg, nbg);
+
+	if(bg->next == nbg)
+	{
+		fprintf(stderr, "SUCCESS: BG linked \n");
+	}
+	else
+	{
+		fprintf(stderr, "ERROR: BGs LINKED INCORRECTLY \n");
+	}
+
+
+	// READ --
+	if(nth_bit_bg(bg, 5) != 1 || nth_bit_bg(nbg, 1) != 1 || nth_bit_bg(nbg, 0) != 0 || nth_bit_bg(bg, 7) != 0)
+	{
+		fprintf(stderr, "ERROR: UNLINKED BG READING INCORRECTLY \n");
+	}
+	else
+	{
+		fprintf(stderr, "SUCCESS: Unlinked BG reads correctly. \n");
+	}
+
+	if(nth_bit_bg(bg, 5) != 1 || nth_bit_bg(bg, 9) != 1 || nth_bit_bg(bg, 12) != 1 || nth_bit_bg(bg, 7) != 0 ||
+			nth_bit_bg(bg, 3) != 0)
+	{
+		fprintf(stderr, "ERROR: LINKED BG READING INCORRECTLY \n");
+	}
+	else
+	{
+		fprintf(stderr, "SUCCESS: Linked BG reading correctly \n");
+	}
+
+
+	// DROP --
+	memdrop_bg(bg, "/home/providence/Dropbox/_ticket/c_devel/concretea/test_data/binlist_store/binlist._ticket");
+	bg = NULL;
+	nbg = NULL;
+
+	fprintf(stderr, "SUCCESS: BG dropped \n");
+
+
+	// LIFT --
+	BitGroup* lft_bg = memlift_bg("/home/providence/Dropbox/_ticket/c_devel/concretea/test_data/binlist_store/binlist._ticket");
+
+	fprintf(stderr, "SUCCESS: BG lifted \n");
+
+
+	// POST-LIFT READ --
+	if(nth_bit_bg(lft_bg, 5) != 1 || nth_bit_bg(lft_bg, 9) != 1 || nth_bit_bg(lft_bg, 12) != 1 || nth_bit_bg(lft_bg, 7) != 0 ||
+			nth_bit_bg(lft_bg, 3) != 0)
+	{
+		fprintf(stderr, "ERROR: LIFTED BG READING INCORRECTLY \n");
+	}
+	else
+	{
+		fprintf(stderr, "SUCCESS: Lifted BG reading correctly \n");
+	}
+
+
+	// RUN-ON SET --
+	set_nth_bg(lft_bg, 20, 1);
+
+	if(nth_bit_bg(lft_bg, 20) != 1)
+	{
+		fprintf(stderr, "ERROR: RUN-ON SETTING NOT FUNCTIONING \n");
+	}
+	else
+	{
+		fprintf(stderr, "SUCCESS: Run-on sets functioning \n");
+	}
+
+
+	// COUNT --
+	if(length_bg(lft_bg) != 24)
+	{
+		fprintf(stderr, "ERROR: BG LENGTH INCORRECT \n");
+	}
+	else
+	{
+		fprintf(stderr, "SUCCESS: BG has correct length \n");
+	}
+
+	memdrop_bg(lft_bg, "/home/providence/Dropbox/_ticket/c_devel/concretea/test_data/binlist_store/binlist._ticket");
+	lft_bg = NULL;
+
+
 	// test node storage
 
 	// INITIALIZE --
-	initialize_node();
+	uint8_t uint;
+	uint = 1;
 
-	printf("SUCCESS: Node initialized \n");
-	fflush(stdout);
+	Node* node = nnode();
+	set_node_placeholder(node, uint);
 
+	char* c_ptr;
+	c_ptr = "testurl\0";
+	set_node_url(node, c_ptr, 0);
 
-	// LOAD --
-	Node* node = memlift_node("default");
-
-	printf("SUCCESS: Node loaded \n");
-	fflush(stdout);
-
-
-	// ASSIGN --
-	*(node->is_placeholder) = 1;
-	set_node_url(node, "testpattern");
-
-	printf("ASSIGNED: %s  ||  DESIRED: testpattern\n", node->url);
-	fflush(stdout);
-
-
-	// CONCAT --
-	Node* other = nnode();
-	*(other->is_placeholder) = 1;
-	set_node_url(other, "otherpattern");
-	node = node_concat(other, node, 0);
-
-	printf("INITIAL LINKAGE::\n");
-	printf("LINKED: First: otherpattern  ||  Second: testpattern\n");
-	printf("ACTUAL: First: %s  ||  Second: %s \n", node->url, node->next->url);
+	printf("SUCCESS: Node Initialized \n");
 	fflush(stdout);
 
 
 	// DROP --
-	memdrop_node(node, "default");
+	memdrop_node(node);
+	node = NULL;
 
-	printf("SUCCESS: Node list dropped\n");
-
-
-	// RELOAD --
-	Node* sec_node = memlift_node("default");
-
-	printf("RELOAD::\n");
-	printf("LINKED: First otherpattern  || Second: testpattern\n");
-	printf("ACTUAL: First %s  || Second: %s \n", sec_node->url, sec_node->next->url);
+	printf("SUCCESS: Node Dropped \n");
 	fflush(stdout);
+
+
+	// LIFT --
+	node = memlift_node();
+
+	printf("SUCCESS: Node Lifted \n");
+	printf("EXPECTED: node->url :: testurl  || ACTUAL: node->url :: %s \n", node->url);
+	printf("EXPECTED: node->placeholder :: 1  || ACTUAL: node->placeholder :: %u \n", *(node->is_placeholder));
+	fflush(stdout);
+
+
+	// LINK --
+	Node* first_node = nnode();
+	char* text = "testurltwo\0";
+	uint8_t u = 1;
+
+	set_node_url(first_node, text, 0);
+	set_node_placeholder(first_node, u);
+
+	push_node(first_node, node);
+
+	printf("SUCCESS: Nodes linked. \n");
+	printf("First node url: %s  ||  Second node url: %s \n", first_node->url, first_node->next->url);
+	fflush(stdout);
+
+	memdrop_node(first_node);
+
+	Node* node1 = memlift_node();
+
+	printf("SUCCESS: Linked nodes lifted \n");
+	printf("EXPECTED:: First node url: testurltwo  ||  Second node url: testurl \n");
+	printf("ACTUAL:: First node url: %s  ||  Second node url: %s \n", node1->url, node1->next->url);
+
+	memdrop_node(node1);
 
 
 	// test indicies
@@ -98,13 +212,12 @@ int main(void)
 	FileCoords* npfc;
 
 	np_plat = load_all_indices();
-	npfc = lookup_index(pplat, "testpattern", 0);
+	npfc = lookup_index(np_plat, "testpattern", 0);
 
 	printf("Reload INDEX::\n");
 	printf("FC, bytes: %d || Desired: 12\n", npfc->mod_bytes);
 	printf("FC, bits: %d  || Desired: 14\n", npfc->mod_bits);
 	fflush(stdout);
-
 
 	exit(EXIT_SUCCESS);
 }

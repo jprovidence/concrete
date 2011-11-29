@@ -15,13 +15,15 @@
 #define URLSIZE 200;
 #define FCSIZE 64; // number bits in FileCoords
 #define ALPHA "abcdefghijklmnopqrstuvwxyz";
+#define STERM "zzzzz";
 
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 #include <stdint.h>
 #include <glob.h>
-#include "linker.h"
+
 
 struct FileCoords
 {
@@ -89,6 +91,12 @@ char* index_file_name(char* url);
 void free_index_file_name(char* ptr);
 
 char* file_pivot_char(char* url);
+
+void trivial_sort(char* sorted[26], glob_t* pglob);
+
+void populate(char* sorted[26]);
+
+void shift_after(int index, char* list[26]);
 
 
 

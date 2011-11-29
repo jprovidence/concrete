@@ -725,3 +725,46 @@ char* file_pivot_char(char* url)
 	return &(url[count]);
 }
 
+void trivial_sort(char* sorted[26], glob_t* pglob)
+{
+	int count, icount;
+	char* current_sorted, * current_unsorted;
+
+	for(count = 0; count < pglob->gl_pathc; count++)
+	{
+		for(icount = 0; icount <= count; icount++)
+		{
+			current_sorted = sorted[icount];
+			current_unsorted = pglob->gl_pathv[count];
+
+			if (strcmp(current_sorted, current_unsorted) > 0)
+			{
+				shift_after(icount, sorted);
+				sorted[icount] = current_unsorted;
+				break;
+			}
+		}
+	}
+}
+
+void populate(char* sorted[26])
+{
+	int i;
+
+	for(i = 0; i < 26; i++)
+	{
+		sorted[i] = STERM;
+	}
+}
+
+
+void shift_after(int index, char* list[26])
+{
+	int i;
+
+	for (i = 24; i > index; i--)
+	{
+		list[i + 1] = list[i];
+	}
+}
+

@@ -6,11 +6,21 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#include "linker.h"
+#include "index.h"
 
 
 #define NODE_FILE "/home/providence/Dropbox/_ticket/c_devel/concretea/test_data/node_store/node_data._ticket";
 #define SEPARATOR ",";
+#define BGSIZE 8;
+
+
+struct BitGroup
+{
+	uint8_t byte;
+	struct BitGroup* next;
+	struct BitGroup* prev;
+};
+typedef struct BitGroup BitGroup;
 
 
 struct Node
@@ -22,6 +32,26 @@ struct Node
 };
 typedef struct Node Node;
 
+
+BitGroup* memlift_bg(char* file_name);
+
+void memdrop_bg(BitGroup* pbg, char* file_name);
+
+void link_bg(BitGroup* first, BitGroup* rest);
+
+int length_bg(BitGroup* bg);
+
+void set_nth_bg(BitGroup* bg, int nth, int bit);
+
+void set_adv_current(BitGroup* bg, int nth, int bit);
+
+int nth_bit_bg(BitGroup* bg, int nth);
+
+int read_adv_current(BitGroup* bg, int nth);
+
+BitGroup* nbitgroup();
+
+void kbitgroup(BitGroup* bg);
 
 void push_node(Node* node, Node* list);
 

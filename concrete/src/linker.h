@@ -7,7 +7,7 @@
 #include <string.h>
 #include <glob.h>
 
-#define STERM "zzzzz";
+
 
 enum Kind
 {
