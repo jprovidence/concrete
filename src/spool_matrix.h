@@ -33,6 +33,14 @@ struct Node
 typedef struct Node Node;
 
 
+struct ConcMtx
+{
+	Node* node_list;
+	BitGroup** matrix;
+};
+typedef struct ConcMtx ConcMtx;
+
+
 BitGroup* memlift_bg(char* file_name);
 
 void memdrop_bg(BitGroup* pbg, char* file_name);
