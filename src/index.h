@@ -1,7 +1,7 @@
 /*
  * index.h
  *
- *  Created on: 2011-11-21
+ *  Created on: 2011-12-05
  *      Author: providence
  */
 
@@ -9,95 +9,26 @@
 #define INDEX_H_
 
 
-#define FILE_TERMINATOR "._ticket";
-#define MASTER_URL_DIR "/home/providence/Dropbox/_ticket/c_devel/concretea/test_data/master_url_index/*";
-#define ARRAYSIZE 26;
-#define URLSIZE 200;
-#define FCSIZE 64; // number bits in FileCoords
-#define ALPHA "abcdefghijklmnopqrstuvwxyz";
-#define STERM "zzzzz";
-
-
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <glob.h>
+#include "matin_structs.h"
+#include "matrix.h"
 
 
-struct FileCoords
-{
-	uint32_t mod_bytes;
-	uint32_t mod_bits;
-};
-typedef struct FileCoords FileCoords;
-
-struct Plateau
-{
-	char* characters;
-	struct Plateau** pointers;
-	struct FileCoords* file_coords;
-
-};
-typedef struct Plateau Plateau;
+#define INDEX_FILE "/home/providence/Dropbox/_ticket/c_devel/fiber/data/index_store._ticket";
 
 
-void augment_index(Plateau* pplat, char* url, int idx, uint32_t mod_bytes, uint32_t mod_bits);
+floc* floating_index_lookup(_w_index* idx, char* string);
 
-FileCoords* lookup_index(Plateau* pplat, char url[200], int idx);
+floc* _floating_index_lookup(_w_index* idx, char* string, int string_len, int position);
 
-int is_terminus(char url[200], int idx);
+void write_to_index(_w_index* idx, char* string, floc* mtx_loc);
 
-void initialize_indices();
+void _write_to_index(_w_index* idx, char* string, int string_len, floc* mtx_loc, int position);
 
-Plateau* load_all_indices();
+int currently_indexed(char c, _w_index* idx, int ilength);
 
-void drop_all_indices(Plateau* pplat);
-
-Plateau* nplat();
-
-void kplat(Plateau* ptr);
-
-Plateau* memlift_idx(char* file);
-
-Plateau* lift_idx(FILE* f, int arr_size, int* index);
-
-int are_all_null(int* ary, int arr_size);
-
-void read_set_file_coords(FILE* f, Plateau* pplat, int* index);
-
-void file_read(FILE* f, int index, int* ptr);
-
-void memdrop_idx(Plateau* pplat, char* file);
-
-int drop_idx(Plateau* pplat, FILE* f, int arr_size, int index);
-
-int write_plateau_signature(Plateau* pplat, FILE* f, int arr_size, int index);
-
-void file_write(FILE* f, int index, int bit);
-
-void set_nth_8(uint8_t* ptr, int nth, int bit);
-
-void set_nth_32(uint32_t* ptr, int nth, int bit);
-
-int nth_bit_8(uint8_t var, int nth);
-
-int nth_bit_32(uint32_t var, int nth);
-
-Plateau* plateau_jump(Plateau* start, const char* letter);
-
-char* index_file_name(char* url);
-
-void free_index_file_name(char* ptr);
-
-char* file_pivot_char(char* url);
-
-void trivial_sort(char* sorted[26], glob_t* pglob);
-
-void populate(char* sorted[26]);
-
-void shift_after(int index, char* list[26]);
-
+_w_index* new_w_index_level();
 
 
 #endif /* INDEX_H_ */
