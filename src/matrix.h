@@ -22,9 +22,13 @@ void prototype_push_relation(prototype* proto, char* url);
 
 matrix* new_matrix(char* location);
 
+void drop_floating_matrix(matrix* mtx);
+
 prototype* new_prototype(char* url);
 
 floc* new_floc(uint64_t mbytes, uint8_t length);
+
+void free_floc(floc* f);
 
 
 #endif /* MATRIX_H_ */

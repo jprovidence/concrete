@@ -14,11 +14,18 @@ floc* _floating_index_lookup(_w_index* idx, char* string, int string_len, int po
 		return idx->matrix_location;
 	}
 
-	current_index = currently_indexed(string[position], idx, string_len);
-
-	if(current_index != -1)
+	if(idx->characters == NULL)
 	{
-		return _floating_index_lookup(idx->progressions[current_index], string, string_len, position + 1);
+		return NULL;
+	}
+	else
+	{
+		current_index = currently_indexed(string[position], idx, strlen(idx->characters));
+
+		if(current_index != -1)
+		{
+			return _floating_index_lookup(idx->progressions[current_index], string, string_len, position + 1);
+		}
 	}
 
 	return NULL;
@@ -46,7 +53,7 @@ void _write_to_index(_w_index* idx, char* string, int string_len, floc* mtx_loc,
 	{
 		ichars_len = 0;
 		current_index = -1;
-		new_characters = malloc(sizeof(char));
+		new_characters = malloc(sizeof(char) + 1);
 		new_w_indices = malloc(sizeof(_w_index *));
 	}
 	else
@@ -56,7 +63,7 @@ void _write_to_index(_w_index* idx, char* string, int string_len, floc* mtx_loc,
 
 		if(current_index == -1)
 		{
-			new_characters = malloc(sizeof(char) * (ichars_len + 1));
+			new_characters = malloc(sizeof(char) * (ichars_len + 2));
 			new_w_indices = malloc(sizeof(_w_index *) * (ichars_len + 1));
 
 			memmove(new_characters, idx->characters, sizeof(char) * ichars_len);
@@ -73,6 +80,7 @@ void _write_to_index(_w_index* idx, char* string, int string_len, floc* mtx_loc,
 	}
 
 	memmove(&(new_characters[ichars_len]), &(string[position]), sizeof(char));
+	new_characters[ichars_len + 1] = '\0';
 	new_w_indices[ichars_len] = new_w_index_level();
 
 	idx->characters = new_characters;
@@ -114,4 +122,125 @@ _w_index* new_w_index_level()
 	memmove(idx->matrix_location->mod_bytes, &blank64, sizeof(uint64_t));
 
 	return idx;
+}
+
+void free_w_index_level(_w_index* idx)
+{
+	if(idx != NULL)
+	{
+		if(idx->characters != NULL)
+		{
+			free(idx->characters);
+		}
+		if(idx->matrix_location != NULL)
+		{
+			if(idx->matrix_location->byte_length != NULL)
+			{
+				free(idx->matrix_location->byte_length);
+			}
+			if(idx->matrix_location->mod_bytes != NULL)
+			{
+				free(idx->matrix_location->mod_bytes);
+			}
+			free(idx->matrix_location);
+		}
+		if(idx->progressions != NULL)
+		{
+			free(idx->progressions);
+		}
+		free(idx);
+		idx = NULL;
+	}
+}
+
+void commit_w_index(_w_index* idx)
+{
+	iloc* loc;
+	char* index_file = INDEX_FILE;
+	char* header = INDEX_HEADER_FILE;
+
+	FILE* f = fopen(index_file, "w+");
+	fseek(f, 0, SEEK_END);
+	loc = _commit_w_index(idx, f);
+	fclose(f);
+
+	f = fopen(header, "w");
+	fwrite(loc->mod_bytes, sizeof(uint64_t), 1, f);
+	fclose(f);
+
+	free_iloc(loc);
+}
+
+iloc* _commit_w_index(_w_index* idx, FILE* f)
+{
+	int i, num_chars;
+	uint8_t num_chars8;
+	iloc** iloc_list;
+	iloc* ret_iloc = new_iloc();
+	uint8_t blank8 = 0;
+	uint64_t blank64 = 0;
+
+	if(idx->progressions != NULL)
+	{
+		num_chars = strlen(idx->characters);
+		num_chars8 = (uint8_t) num_chars;
+
+		iloc_list = malloc(sizeof(iloc *) * num_chars);
+
+		for(i = 0; i < num_chars; i++)
+		{
+			iloc_list[i] = _commit_w_index(idx->progressions[i], f);
+		}
+
+		*(ret_iloc->mod_bytes) = (uint64_t) ftell(f);
+		fwrite(&num_chars, sizeof(uint8_t), 1, f);
+
+		for(i = 0; i < num_chars; i++)
+		{
+			fwrite(&(idx->characters[i]), sizeof(char), 1, f);
+			fwrite(iloc_list[i]->mod_bytes, sizeof(uint64_t), 1, f);
+			free_iloc(iloc_list[i]);
+		}
+
+		free(iloc_list);
+	}
+	else
+	{
+		fwrite(&blank8, sizeof(uint8_t), 1, f);
+	}
+
+	if(idx->matrix_location == NULL)
+	{
+		fwrite(&blank64, sizeof(uint64_t), 1, f);
+		fwrite(&blank8, sizeof(uint8_t), 1, f);
+	}
+	else
+	{
+		fwrite(idx->matrix_location->mod_bytes, sizeof(uint64_t), 1, f);
+		fwrite(idx->matrix_location->byte_length, sizeof(uint8_t), 1, f);
+	}
+
+	free_w_index_level(idx);
+	return ret_iloc;
+}
+
+iloc* new_iloc()
+{
+	iloc* i = malloc(sizeof(iloc));
+	i->mod_bytes = malloc(sizeof(uint64_t));
+	memset(i->mod_bytes, 0, sizeof(uint64_t));
+	return i;
+}
+
+void free_iloc(iloc* i)
+{
+	if(i != NULL)
+	{
+		if(i->mod_bytes != NULL)
+		{
+			free(i->mod_bytes);
+		}
+		free(i);
+		i = NULL;
+	}
 }

@@ -22,10 +22,8 @@ typedef struct fiber_coordinates floc;
 struct index_coordinates
 {
 	uint64_t* mod_bytes;
-	uint8_t* mod_bits;
-	uint8_t* bit_length;
 };
-typedef struct coordinates iloc;
+typedef struct index_coordinates iloc;
 
 struct read_index_level
 {
@@ -47,7 +45,7 @@ struct node_prototype
 {
 	char** relationships;
 	char* self;
-	int relationship_count;
+	int* relationship_count;
 };
 typedef struct node_prototype prototype;
 

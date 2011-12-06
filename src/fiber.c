@@ -15,26 +15,52 @@ int main(int argc, char** argv)
 
 void test()
 {
-	char* index_file = INDEX_FILE;
-	matrix* mtx = new_matrix(index_file);
-	prototype* proto = new_prototype("www.test.com/test");
+	char* matrix_file = FIBER_FILE;
+	char* test_url = "www.test.com/test";
+	matrix* mtx = new_matrix(matrix_file);
+	prototype* proto = new_prototype(test_url);
 
 	// Test prototype
-	if(strcmp(proto->self, "www.test.com/test") == 0 && proto->relationship_count == 0 && proto->relationships == NULL)
+	if(strncmp(proto->self, test_url, sizeof(char) * strlen(test_url)) == 0 && *(proto->relationship_count) == 0 && proto->relationships == NULL)
 	{
 		fprintf(stderr, "_test: prototypes initializing correctly...\n");
 	}
-	prototype_push_relation(proto, "www.relation1.com/1");
-	prototype_push_relation(proto, "www.relation2.com/2");
-	prototype_push_relation(proto, "www.relation3.com/3");
-
-	if(strcmp(proto->relationships[0], "www.relation1.com/1") == 0 && strcmp(proto->relationships[2], "www.relation3.com/3") == 0)
+	else
 	{
-		fprintf(stderr, "_test: prototypes pushing correctly...\n");
+		fprintf(stderr, "_test: _ERR_ prototypes not initializing correctly...\n");
 	}
-	if(proto->relationship_count == 3)
+
+	char* rel1_str = "www.relation1.com/1";
+	char* rel2_str = "www.relation2.com/2";
+	char* rel3_str = "www.relation3.com/3";
+
+	prototype_push_relation(proto, rel1_str);
+	prototype_push_relation(proto, rel2_str);
+	prototype_push_relation(proto, rel3_str);
+
+	if(strncmp(proto->relationships[0], rel1_str, sizeof(char) * strlen(rel1_str)) == 0)
+	{
+		if(strncmp(proto->relationships[2], rel3_str, sizeof(char) * strlen(rel3_str)) == 0)
+		{
+			fprintf(stderr, "_test: prototypes pushing correctly...\n");
+		}
+		else
+		{
+			fprintf(stderr, "_test: _ERR_ prototypes not pushing correctly...\n");
+		}
+	}
+	else
+	{
+		fprintf(stderr, "_test: _ERR_ prototypes not pusing correctly...\n");
+	}
+
+	if(*(proto->relationship_count) == 3)
 	{
 		fprintf(stderr, "_test: prototype relationship counter incrementing correctly...\n");
+	}
+	else
+	{
+		fprintf(stderr, "_test: _ERR_ prototype relationship counter not incrementing correctly...\n");
 	}
 
 
@@ -50,6 +76,9 @@ void test()
 	write_to_index(idx, "index_test_1", test_floc1);
 	write_to_index(idx, "index_test_2", test_floc2);
 
+	free_floc(test_floc1);
+	free_floc(test_floc2);
+
 	floc* res_floc1 = floating_index_lookup(idx, "index_test_1");
 	floc* res_floc2 = floating_index_lookup(idx, "index_test_2");
 	floc* res_floc3 = floating_index_lookup(idx, "this_fails");
@@ -63,6 +92,11 @@ void test()
 		fprintf(stderr, "_test: byte length indexing correctly...\n");
 	}
 
+	free_floc(res_floc1);
+	free_floc(res_floc2);
+	free_floc(res_floc3);
+
 	// Test matrix
 	add_to_matrix(mtx, proto);
+	drop_floating_matrix(mtx);
 }

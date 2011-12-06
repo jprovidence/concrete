@@ -16,6 +16,8 @@
 
 
 #define INDEX_FILE "/home/providence/Dropbox/_ticket/c_devel/fiber/data/index_store._ticket";
+#define INDEX_HEADER_FILE "/home/providence/Dropbox/_ticket/c_devel/fiber/data/index_header_store._ticket";
+#define THROWAWAY_FILE "/home/providence/Dropbox/_ticket/c_devel/fiber/data/index_store._ticket";
 
 
 floc* floating_index_lookup(_w_index* idx, char* string);
@@ -29,6 +31,14 @@ void _write_to_index(_w_index* idx, char* string, int string_len, floc* mtx_loc,
 int currently_indexed(char c, _w_index* idx, int ilength);
 
 _w_index* new_w_index_level();
+
+void commit_w_index(_w_index* idx);
+
+iloc* _commit_w_index(_w_index* idx, FILE* f);
+
+iloc* new_iloc();
+
+void free_iloc(iloc* i);
 
 
 #endif /* INDEX_H_ */
