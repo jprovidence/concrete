@@ -36,6 +36,10 @@ void commit_w_index(_w_index* idx);
 
 iloc* _commit_w_index(_w_index* idx, FILE* f);
 
+_w_index* float_index();
+
+_w_index* _float_index(iloc* loc, FILE* f);
+
 iloc* new_iloc();
 
 void free_iloc(iloc* i);

@@ -1,39 +1,94 @@
 #include "matrix.h"
 
 
+Node* w_matrix_lookup(matrix* mtx, char* string)
+{
+	int i;
+	uint64_t reindex_ptr = 0;
+	uint8_t rel_size = 0;
+	char* file = FIBER_FILE;
+	FILE* f = fopen(file, "r");
+	Node* result = new_node();
+	floc* node_self = floating_index_lookup(mtx->write_index, string);
+
+	memmove(result->self_coordinates->byte_length, node_self->byte_length, sizeof(uint8_t));
+	memmove(result->self_coordinates->mod_bytes, node_self->mod_bytes, sizeof(uint64_t));
+
+	fseek(f, ((int) *(result->self_coordinates->mod_bytes)), SEEK_SET);
+	fread(&rel_size, sizeof(uint8_t), 1, f);
+
+	if(rel_size == 0)
+	{
+		fread(&reindex_ptr, sizeof(uint64_t), 1, f);
+
+		if(reindex_ptr == *(result->self_coordinates->mod_bytes))
+		{
+			return result;
+		}
+		else
+		{
+			fseek(f, (int) reindex_ptr, SEEK_SET);
+		}
+	}
+	else if(rel_size == 1)
+	{
+		return result;
+	}
+
+	result->relationships = malloc(sizeof(floc *) * ((int) rel_size));
+
+	for(i = 0; i < ((int) (rel_size - 1)); i++)
+	{
+		result->relationships[i] = new_floc(0, 0);
+		fread(result->relationships[i]->byte_length, sizeof(uint8_t), 1, f);
+		fread(result->relationships[i]->mod_bytes, sizeof(uint64_t), 1, f);
+	}
+
+	return result;
+}
+
+
 void add_to_matrix(matrix* mtx, prototype* proto)
 {
 	int i, file_pos;
-	int dep_size = (sizeof(uint64_t) * *(proto->relationship_count));
-	uint8_t total_size = (uint8_t) (dep_size + sizeof(uint8_t));
-	floc* to_index;
+	uint64_t file_pos64;
+	uint8_t total_size = (uint8_t) (*(proto->relationship_count) + 1);
+	floc* to_index, * is_indexed;
 	floc* dep_list = map_dependencies_to_matrix(mtx, proto);
 	FILE* f = fopen(mtx->store_file, "a+");
 
 	fseek(f, 0, SEEK_END);
+	file_pos = (int) ftell(f);
 	fwrite(&total_size, sizeof(uint8_t), 1, f);
 
 	for(i = 0; i < *(proto->relationship_count); i++)
 	{
-		fwrite((dep_list->byte_length), sizeof(uint8_t), 1, f);
-		fwrite((dep_list->mod_bytes), sizeof(uint64_t), 1, f);
+		fwrite((dep_list[i].byte_length), sizeof(uint8_t), 1, f);
+		fwrite((dep_list[i].mod_bytes), sizeof(uint64_t), 1, f);
 	}
 
-	file_pos = ftell(f) - total_size;
-	to_index = new_floc((uint64_t) file_pos, (uint8_t) total_size);
+	is_indexed = floating_index_lookup(mtx->write_index, proto->self);
+	if(is_indexed != NULL)
+	{
+		file_pos64 = (uint64_t) file_pos;
+		fseek(f, (int) is_indexed->mod_bytes + 1, SEEK_SET);
+		fwrite(&file_pos64, sizeof(uint64_t), 1, f);
+	}
 
+	to_index = new_floc((uint64_t) file_pos, (uint8_t) total_size);
 	write_to_index(mtx->write_index, proto->self, to_index);
+
 	free_floc(to_index);
 	free(dep_list);
-
 	fclose(f);
 }
 
 floc* map_dependencies_to_matrix(matrix* mtx, prototype* proto)
 {
-	int i, file_pos;
+	int i;
 	floc* fiber_location, * ret_list;
 	uint8_t blank = 0;
+	uint64_t reindex_ptr = 0;
 	FILE* f;
 
 	f = fopen(mtx->store_file, "a+");
@@ -46,10 +101,11 @@ floc* map_dependencies_to_matrix(matrix* mtx, prototype* proto)
 		if(fiber_location == NULL)
 		{
 			fseek(f, 0, SEEK_END);
+			reindex_ptr = (uint64_t) ftell(f);
 			fwrite(&blank, sizeof(uint8_t), 1, f);
-			file_pos = ftell(f);
+			fwrite(&reindex_ptr, sizeof(uint64_t), 1, f);
 
-			fiber_location = new_floc((uint64_t) (file_pos - 1), (uint8_t) 1);
+			fiber_location = new_floc(reindex_ptr, (uint8_t) 1);
 			write_to_index(mtx->write_index, proto->relationships[i], fiber_location);
 
 			free_floc(fiber_location);
@@ -104,9 +160,19 @@ matrix* new_matrix(char* location)
 	return m;
 }
 
+matrix* float_matrix()
+{
+	char* file = FIBER_FILE;
+	matrix* mtx = malloc(sizeof(matrix));
+	mtx->store_file = file;
+	mtx->write_index = float_index();
+	return mtx;
+}
+
 void drop_floating_matrix(matrix* mtx)
 {
 	commit_w_index(mtx->write_index);
+	free(mtx);
 }
 
 prototype* new_prototype(char* url)
@@ -155,4 +221,14 @@ void free_floc(floc* f)
 
 		free(f);
 	}
+}
+
+Node* new_node()
+{
+	Node* n = malloc(sizeof(Node));
+	n->relationships = NULL;
+	n->self_coordinates = malloc(sizeof(floc));
+	n->self_coordinates->byte_length = malloc(sizeof(uint8_t));
+	n->self_coordinates->mod_bytes = malloc(sizeof(uint64_t));
+	return n;
 }

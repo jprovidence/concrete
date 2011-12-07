@@ -51,10 +51,10 @@ typedef struct node_prototype prototype;
 
 struct node
 {
-	floc** relationhships;
+	floc** relationships;
 	floc* self_coordinates;
 };
-typedef struct node node;
+typedef struct node Node;
 
 struct fiber_matrix
 {

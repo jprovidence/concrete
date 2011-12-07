@@ -178,7 +178,6 @@ iloc* _commit_w_index(_w_index* idx, FILE* f)
 	iloc** iloc_list;
 	iloc* ret_iloc = new_iloc();
 	uint8_t blank8 = 0;
-	uint64_t blank64 = 0;
 
 	if(idx->progressions != NULL)
 	{
@@ -206,22 +205,74 @@ iloc* _commit_w_index(_w_index* idx, FILE* f)
 	}
 	else
 	{
+		*(ret_iloc->mod_bytes) = ftell(f);
 		fwrite(&blank8, sizeof(uint8_t), 1, f);
 	}
 
-	if(idx->matrix_location == NULL)
-	{
-		fwrite(&blank64, sizeof(uint64_t), 1, f);
-		fwrite(&blank8, sizeof(uint8_t), 1, f);
-	}
-	else
-	{
-		fwrite(idx->matrix_location->mod_bytes, sizeof(uint64_t), 1, f);
-		fwrite(idx->matrix_location->byte_length, sizeof(uint8_t), 1, f);
-	}
+	fwrite(idx->matrix_location->mod_bytes, sizeof(uint64_t), 1, f);
+	fwrite(idx->matrix_location->byte_length, sizeof(uint8_t), 1, f);
 
 	free_w_index_level(idx);
 	return ret_iloc;
+}
+
+_w_index* float_index()
+{
+	_w_index* ret;
+	uint64_t idx_start;
+	iloc* loc = new_iloc();
+	char* index_header = INDEX_HEADER_FILE;
+	char* index_file = INDEX_FILE;
+
+	FILE* f = fopen(index_header, "r");
+	fread(&idx_start, sizeof(uint64_t), 1, f);
+	fclose(f);
+
+	memmove(loc->mod_bytes, &idx_start, sizeof(uint64_t));
+
+	f = fopen(index_file, "r");
+	ret = _float_index(loc, f);
+	fclose(f);
+
+	free_iloc(loc);
+	return ret;
+}
+
+_w_index* _float_index(iloc* loc, FILE* f)
+{
+	int i, int_num_chars;
+	iloc* iloc_list;
+	uint8_t* num_chars = malloc(sizeof(uint8_t));
+	_w_index* index = new_w_index_level();
+
+	fseek(f, (int) *(loc->mod_bytes), SEEK_SET);
+	fread(num_chars, sizeof(uint8_t), 1, f);
+	int_num_chars = (int) *num_chars;
+
+	index->characters = malloc(sizeof(char) * (int_num_chars + 1));
+	index->characters[int_num_chars] = '\0';
+	index->progressions = malloc(sizeof(_w_index *) * int_num_chars);
+	iloc_list = malloc(sizeof(iloc) * int_num_chars);
+
+	for(i = 0; i < int_num_chars; i++)
+	{
+		fread(&(index->characters[i]), sizeof(char), 1, f);
+		iloc_list[i].mod_bytes = malloc(sizeof(uint64_t));
+		fread(iloc_list[i].mod_bytes, sizeof(uint64_t), 1, f);
+	}
+
+	fread(index->matrix_location->mod_bytes, sizeof(uint64_t), 1, f);
+	fread(index->matrix_location->byte_length, sizeof(uint8_t), 1, f);
+
+	for(i = 0; i < int_num_chars; i++)
+	{
+		index->progressions[i] = _float_index(&(iloc_list[i]), f);
+		free(iloc_list[i].mod_bytes);
+	}
+
+	free(num_chars);
+	free(iloc_list);
+	return index;
 }
 
 iloc* new_iloc()

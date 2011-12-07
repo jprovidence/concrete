@@ -97,6 +97,28 @@ void test()
 	free_floc(res_floc3);
 
 	// Test matrix
+	char* test_url2 = "www.depend.com/test";
+	prototype* test_proto1 = new_prototype(test_url2);
+	prototype_push_relation(test_proto1, test_url);
+
+	add_to_matrix(mtx, test_proto1);
 	add_to_matrix(mtx, proto);
 	drop_floating_matrix(mtx);
+
+	matrix* new_matrix = float_matrix();
+
+	Node* node = w_matrix_lookup(new_matrix, test_url);
+	Node* node2 = w_matrix_lookup(new_matrix, test_url2);
+	Node* node3 = w_matrix_lookup(new_matrix, rel1_str);
+
+	if(node2->relationships[0] == node->self_coordinates && node->relationships[0] == node3->self_coordinates)
+	{
+		fprintf(stderr, "_test: matrix drop/reloading apparently functioning...\n");
+	}
+	else
+	{
+		fprintf(stderr, "_test: _ERR_ matrix drop/realoading not functioning...\n");
+	}
+
+	drop_floating_matrix(new_matrix);
 }
